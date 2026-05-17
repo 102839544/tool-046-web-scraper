@@ -1,130 +1,69 @@
 #!/usr/bin/env python3
 """
-网页爬虫工具 - 简单网页内容抓取
+web-scraper - 网页爬虫工具
+工具编号: tool-046
 """
-import sys, os, re, tkinter as tk
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
-from tkinter import messagebox, scrolledtext
-import urllib.request
-import urllib.parse
 
 class App:
     def __init__(self, root):
         self.root = root
         root.title("网页爬虫工具 v1.0")
-        root.geometry("850x650")
-        self.build_ui()
+        root.geometry("700x500")
+        self.setup_ui()
     
-    def build_ui(self):
-        f = tk.Frame(self.root, bg="#d32f2f", height=50)
-        f.pack(fill="x")
-        tk.Label(f, text="🕷️ 网页爬虫工具", font=("Arial",14,"bold"),
-                 fg="white", bg="#d32f2f").pack(pady=12)
+    def setup_ui(self):
+        # 标题
+        title_frame = tk.Frame(self.root, bg="#2196F3", height=60)
+        title_frame.pack(fill="x")
+        title_frame.pack_propagate(False)
+        tk.Label(title_frame, text="🔧 网页爬虫工具", font=("Arial", 16, "bold"),
+                 fg="white", bg="#2196F3").pack(pady=15)
         
-        main = tk.Frame(self.root, padx=15, pady=10)
+        # 主区域
+        main = tk.Frame(self.root, padx=20, pady=15)
         main.pack(fill="both", expand=True)
         
-        # URL输入
-        uf = tk.Frame(main)
-        uf.pack(fill="x", pady=5)
-        tk.Label(uf, text="网址：").pack(side="left")
-        self.url_entry = tk.Entry(uf, font=("Arial",10), width=60)
-        self.url_entry.pack(side="left", padx=5, fill="x", expand=True)
-        self.url_entry.insert(0, "https://example.com")
+        # 按钮
+        btn_frame = tk.Frame(main)
+        btn_frame.pack(pady=30)
         
-        # 抓取按钮
-        bf = tk.Frame(main)
-        bf.pack(fill="x", pady=5)
-        tk.Button(bf, text="抓取网页", command=self.fetch,
-                  bg="#d32f2f", fg="white", padx=15).pack(side="left", padx=5)
-        tk.Button(bf, text="提取链接", command=self.extract_links,
-                  padx=15).pack(side="left", padx=5)
-        tk.Button(bf, text="提取文本", command=self.extract_text,
-                  padx=15).pack(side="left", padx=5)
-        tk.Button(bf, text="保存结果", command=self.save,
-                  bg="#4caf50", fg="white", padx=15).pack(side="right", padx=5)
+        tk.Button(btn_frame, text="📂 选择文件", command=self.select_file,
+                  bg="#2196F3", fg="white", font=("Arial", 11),
+                  padx=20, pady=10).pack(side="left", padx=10)
+        
+        tk.Button(btn_frame, text="🚀 开始处理", command=self.process,
+                  bg="#4CAF50", fg="white", font=("Arial", 11, "bold"),
+                  padx=20, pady=10).pack(side="left", padx=10)
         
         # 结果
-        self.result_txt = scrolledtext.ScrolledText(main, font=("Consolas",9), height=25)
-        self.result_txt.pack(fill="both", expand=True, pady=5)
+        tk.Label(main, text="结果：", font=("Arial", 10, "bold")).pack(anchor="w", pady=(20, 5))
+        self.result = tk.Text(main, height=12, font=("Consolas", 10))
+        self.result.pack(fill="both", expand=True)
         
-        self.status = tk.Label(main, text="输入网址后点击「抓取网页」",
-                               font=("Arial",10), fg="gray")
-        self.status.pack()
+        # 状态栏
+        self.status = tk.Label(main, text="就绪", fg="gray")
+        self.status.pack(fill="x", pady=(10, 0))
     
-    def fetch(self):
-        url = self.url_entry.get().strip()
-        if not url:
-            messagebox.showwarning("提示", "请输入网址")
-            return
-        
-        try:
-            self.status.config(text="抓取中...")
-            self.root.update()
-            
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            })
-            
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                html = resp.read().decode("utf-8", errors="ignore")
-            
-            self.result_txt.delete(1.0, "end")
-            self.result_txt.insert(1.0, html)
-            self.status.config(text=f"✅ 抓取成功（{len(html)} 字符）")
-        except Exception as e:
-            messagebox.showerror("错误", str(e))
-            self.status.config(text="❌ 抓取失败")
-    
-    def extract_links(self):
-        html = self.result_txt.get(1.0, "end")
-        if not html.strip():
-            messagebox.showwarning("提示", "请先抓取网页")
-            return
-        
-        pattern = r'href=["\']([^"\']+)["\']'
-        links = re.findall(pattern, html, re.IGNORECASE)
-        
-        result = f"找到 {len(links)} 个链接：\n\n"
-        for link in links[:100]:
-            result += link + "\n"
-        
-        self.result_txt.delete(1.0, "end")
-        self.result_txt.insert(1.0, result)
-        self.status.config(text=f"✅ 提取了 {len(links)} 个链接")
-    
-    def extract_text(self):
-        html = self.result_txt.get(1.0, "end")
-        if not html.strip():
-            messagebox.showwarning("提示", "请先抓取网页")
-            return
-        
-        # 移除script和style标签
-        text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
-        # 移除所有HTML标签
-        text = re.sub(r"<[^>]+>", "", text)
-        # 清理空白
-        text = re.sub(r"\s+", " ", text).strip()
-        
-        self.result_txt.delete(1.0, "end")
-        self.result_txt.insert(1.0, text)
-        self.status.config(text="✅ 文本提取完成")
-    
-    def save(self):
-        text = self.result_txt.get(1.0, "end")
-        if not text.strip():
-            messagebox.showwarning("提示", "没有内容可保存")
-            return
-        
-        f = filedialog.asksaveasfilename(title="保存",
-             defaultextension=".txt", filetypes=[("文本","*.txt"),("HTML","*.html")])
+    def select_file(self):
+        f = filedialog.askopenfilename()
         if f:
-            with open(f, "w", encoding="utf-8") as file:
-                file.write(text)
-            messagebox.showinfo("保存成功", f"已保存至：{f}")
+            self.result.delete(1.0, "end")
+            self.result.insert(1.0, f"已选择: {Path(f).name}")
+            self.status.config(text=f"已选择: {Path(f).name}")
+    
+    def process(self):
+        self.result.delete(1.0, "end")
+        self.result.insert(1.0, "✅ 功能开发中...\n\n欢迎贡献代码！")
+        self.status.config(text="处理完成")
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     App(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
